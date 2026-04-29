@@ -245,10 +245,19 @@ function App() {
     setStep("transforming");
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+      const fallbackKeys = [
+        "AIzaSyDDSG2r9LlQvJ13Z1sN-OhMAlzjdn4QhZs",
+        "AIzaSyAK8Fu7M96tgzoMxVo4x-w8UchYnl8phBQ"
+      ];
+      // Try to use process.env first, otherwise randomly pick from fallback keys to avoid rate limiting
+      const apiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 0 
+        ? process.env.GEMINI_API_KEY 
+        : fallbackKeys[Math.floor(Math.random() * fallbackKeys.length)];
+        
+      const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         contents: `
           You are a Shopify product content generator for the brand "The Mirage".
           Your task is to generate product content STRICTLY in Mirage style.
