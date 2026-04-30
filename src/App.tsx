@@ -491,7 +491,7 @@ function App() {
       </div>
 
       {/* --- Header --- */}
-      <header className="h-20 border-b border-white/5 px-8 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-2xl z-50">
+      <header className="h-16 sm:h-20 border-b border-white/5 px-4 sm:px-8 flex items-center justify-between sticky top-0 bg-[#050505]/60 backdrop-blur-2xl z-50">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.1)]">
             <Sparkles className="text-black w-5 h-5" />
@@ -534,7 +534,7 @@ function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -320, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-20 bottom-0 w-80 border-r border-white/5 bg-[#080808]/95 backdrop-blur-3xl z-40 overflow-hidden flex flex-col shadow-2xl"
+              className="fixed left-0 top-16 sm:top-20 bottom-0 w-full sm:w-80 border-r border-white/5 bg-[#080808]/95 backdrop-blur-3xl z-40 overflow-hidden flex flex-col shadow-2xl"
             >
               <div className="p-8 flex items-center justify-between border-b border-white/5">
                 <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">Recent Activity</h2>
@@ -702,15 +702,15 @@ function App() {
         </AnimatePresence>
 
         {/* --- Main Content --- */}
-        <main className={`flex-1 p-12 transition-all duration-500 ${showHistory ? 'ml-80' : 'ml-0'}`}>
-          <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-16">
+        <main className={`flex-1 p-4 sm:p-8 lg:p-12 transition-all duration-500 ${showHistory ? 'ml-0 lg:ml-80' : 'ml-0'}`}>
+          <div className="max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-16">
             
             {/* Left Column: Input & Analysis */}
             <div className="xl:col-span-5 space-y-12">
               <section className="space-y-8">
                 <div className="space-y-3">
                   <Badge className="text-mirage-gold border-mirage-gold/20 bg-mirage-gold/5">AI Powered</Badge>
-                  <h2 className="text-5xl font-serif font-light tracking-tight leading-tight">
+                  <h2 className="text-4xl sm:text-5xl font-serif font-light tracking-tight leading-tight">
                     Refine your <span className="italic text-mirage-gold">Standard.</span>
                   </h2>
                   <p className="text-sm text-white/40 max-w-md leading-relaxed">
@@ -727,20 +727,20 @@ function App() {
                       <input
                         type="url"
                         placeholder="Paste product URL here..."
-                        className="w-full bg-white/5 border border-white/10 rounded-3xl py-6 pl-16 pr-6 focus:outline-none focus:border-mirage-gold/30 focus:bg-white/[0.08] transition-all text-sm shadow-2xl"
+                        className="w-full bg-white/5 border border-white/10 rounded-3xl py-4 sm:py-6 pl-14 sm:pl-16 pr-6 focus:outline-none focus:border-mirage-gold/30 focus:bg-white/[0.08] transition-all text-sm shadow-2xl"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         disabled={isLoading}
                       />
                     </div>
                     <div className="w-full sm:w-48 relative group">
-                      <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                      <div className="absolute inset-y-0 left-5 sm:left-6 flex items-center pointer-events-none">
                         <Tag className="w-5 h-5 text-white/20 group-focus-within:text-mirage-gold transition-colors" />
                       </div>
                       <input
                         type="text"
                         placeholder="Cost Price"
-                        className="w-full bg-white/5 border border-white/10 rounded-3xl py-6 pl-16 pr-6 focus:outline-none focus:border-mirage-gold/30 focus:bg-white/[0.08] transition-all text-sm shadow-2xl"
+                        className="w-full bg-white/5 border border-white/10 rounded-3xl py-4 sm:py-6 pl-14 sm:pl-16 pr-6 focus:outline-none focus:border-mirage-gold/30 focus:bg-white/[0.08] transition-all text-sm shadow-2xl"
                         value={costPrice}
                         onChange={(e) => setCostPrice(e.target.value)}
                         disabled={isLoading}
@@ -750,7 +750,7 @@ function App() {
                   <button
                     type="submit"
                     disabled={isLoading || !url}
-                    className="w-full py-6 bg-white text-black rounded-3xl text-[11px] font-bold uppercase tracking-widest hover:bg-mirage-gold hover:text-black hover:scale-[0.98] active:scale-95 transition-all disabled:opacity-50 shadow-xl flex items-center justify-center gap-3"
+                    className="w-full py-4 sm:py-6 bg-white text-black rounded-3xl text-[11px] font-bold uppercase tracking-widest hover:bg-mirage-gold hover:text-black hover:scale-[0.98] active:scale-95 transition-all disabled:opacity-50 shadow-xl flex items-center justify-center gap-3"
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                       <>
@@ -786,9 +786,9 @@ function App() {
                   <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-12"
+                    className="space-y-6 sm:space-y-12"
                   >
-                    <GlassCard className="space-y-8">
+                    <GlassCard className="space-y-6 sm:space-y-8 p-6 sm:p-8">
                       <SectionHeader icon={Layers} title="Extraction Analysis" subtitle="Raw Data Breakdown" />
                       
                       <div className="space-y-8">
@@ -819,9 +819,9 @@ function App() {
                       </div>
                     </GlassCard>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6">
                       <SectionHeader icon={ImageIcon} title="Visual Assets" subtitle={`${scrapedData.product_images.length} images detected`} />
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                      <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                         {scrapedData.product_images.map((img, i) => (
                           <motion.div 
                             key={i} 
@@ -848,9 +848,9 @@ function App() {
             </div>
 
             {/* Right Column: Premium Output */}
-            <div className="xl:col-span-7">
-              <div className="sticky top-32">
-                <div className="relative min-h-[800px] bg-mirage-paper text-mirage-dark rounded-[3rem] overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.5)] flex flex-col">
+            <div className="xl:col-span-7 mt-4 xl:mt-0">
+              <div className="sticky top-24 sm:top-32">
+                <div className="relative min-h-[500px] sm:min-h-[800px] bg-mirage-paper text-mirage-dark rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] sm:shadow-[0_40px_100px_rgba(0,0,0,0.5)] flex flex-col">
                   
                   {/* --- Loading Overlay --- */}
                   <AnimatePresence>
@@ -859,7 +859,7 @@ function App() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-20 bg-mirage-paper/95 backdrop-blur-xl flex flex-col items-center justify-center p-16 text-center"
+                        className="absolute inset-0 z-20 bg-mirage-paper/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 sm:p-16 text-center"
                       >
                         <div className="relative mb-10">
                           <div className="w-24 h-24 border border-mirage-dark/5 rounded-full" />
@@ -888,8 +888,8 @@ function App() {
                       className="flex-1 flex flex-col"
                     >
                       {/* --- Product Header --- */}
-                      <div className="p-12 pb-8 border-b border-mirage-dark/5">
-                        <div className="flex justify-between items-start mb-8">
+                      <div className="p-6 sm:p-12 pb-6 border-b border-mirage-dark/5">
+                        <div className="flex flex-col sm:flex-row justify-between items-start mb-6 sm:mb-8 gap-4">
                           <div className="space-y-3">
                             <div className="flex items-center gap-3">
                               <span className="px-3 py-1 bg-mirage-dark text-white rounded-full text-[9px] font-bold uppercase tracking-widest">Shopify Ready</span>
@@ -897,21 +897,21 @@ function App() {
                                 {new Date(mirageProduct.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
-                            <h2 className="text-5xl font-serif font-bold tracking-tight leading-[1.05] text-mirage-dark">
+                            <h2 className="text-3xl sm:text-5xl font-serif font-bold tracking-tight leading-[1.05] text-mirage-dark">
                               {mirageProduct.title}
                             </h2>
                           </div>
                           <button 
                             onClick={() => copyToClipboard(mirageProduct.rawCsv || "")}
-                            className="p-5 bg-mirage-dark text-white rounded-3xl hover:bg-mirage-gold hover:scale-105 active:scale-95 transition-all shadow-2xl group"
+                            className="p-4 sm:p-5 bg-mirage-dark text-white rounded-2xl sm:rounded-3xl hover:bg-mirage-gold hover:scale-105 active:scale-95 transition-all shadow-2xl group self-end sm:self-auto"
                             title="Copy Full CSV"
                           >
-                            {copied ? <Check className="w-6 h-6" /> : <Copy className="w-6 h-6 group-hover:rotate-6 transition-transform" />}
+                            {copied ? <Check className="w-5 h-5 sm:w-6 sm:h-6" /> : <Copy className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-6 transition-transform" />}
                           </button>
                         </div>
 
                         {/* Tabs */}
-                        <div className="flex gap-8 border-b border-mirage-dark/5">
+                        <div className="flex gap-4 sm:gap-8 border-b border-mirage-dark/5 overflow-x-auto custom-scrollbar-light">
                           {["preview", "csv", "raw"].map((tab) => (
                             <button
                               key={tab}
@@ -930,7 +930,7 @@ function App() {
                       </div>
 
                       {/* --- Tab Content --- */}
-                      <div className="flex-1 overflow-y-auto p-12 pt-8 custom-scrollbar-light">
+                      <div className="flex-1 overflow-y-auto p-6 sm:p-12 pt-6 sm:pt-8 custom-scrollbar-light">
                         <AnimatePresence mode="wait">
                           {activeTab === "preview" && (
                             <motion.div
@@ -938,10 +938,10 @@ function App() {
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="space-y-12"
+                              className="space-y-8 sm:space-y-12"
                             >
                               {/* Summary Grid */}
-                              <div className="grid grid-cols-3 gap-6">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
                                 <div className="p-6 bg-mirage-dark/[0.03] rounded-[2rem] border border-mirage-dark/5">
                                   <p className="text-[9px] font-bold uppercase tracking-widest text-mirage-dark/30 mb-3">Price Point</p>
                                   <div className="flex items-baseline gap-3">
@@ -979,11 +979,11 @@ function App() {
                                     <h1 className="text-8xl font-serif font-bold uppercase">Mirage</h1>
                                   </div>
                                   <div 
-                                    className="prose prose-lg max-w-none text-mirage-dark/80 font-serif leading-relaxed
+                                    className="prose prose-sm sm:prose-lg max-w-none text-mirage-dark/80 font-serif leading-relaxed
                                       prose-p:mb-6 prose-ul:mb-6 prose-li:mb-2 prose-strong:font-bold prose-strong:text-mirage-dark"
                                     dangerouslySetInnerHTML={{ __html: mirageProduct.description }}
                                   />
-                                </div >
+                                </div>
                               </section>
                               {/* Image Gallery */}
                               <section className="space-y-6">
@@ -1001,7 +1001,7 @@ function App() {
                                     </button>
                                   )}
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                   {mirageProduct.images.map((img, i) => (
                                     <div key={i} className="aspect-[3/4] rounded-2xl overflow-hidden bg-mirage-dark/5 border border-mirage-dark/5 relative group">
                                       <img 
