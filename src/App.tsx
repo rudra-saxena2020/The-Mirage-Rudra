@@ -291,17 +291,15 @@ function App() {
                 6. All prices are in INR.
                 
                 ---
-                ## CRITICAL BRAND RULE (NON-NEGOTIABLE)
-                * The brand name "The Mirage" MUST be included in the description
-                * It MUST appear in the FIRST sentence
-                * It MUST sound natural and premium
-                * DO NOT skip this under any condition
+                ## CRITICAL BRAND RULE
+                * DO NOT mention "The Mirage" or "Mirage" anywhere in the main description text or the first sentence.
+                * The ONLY place Mirage should be mentioned is in the exact footer line provided below.
 
                 ---
                 ## DESCRIPTION TEMPLATE (STRICT)
                 You MUST follow this exact structure for the description (HTML format):
 
-                <p>Make refined strides with The Mirage [product_type], designed with a [key_design] and a clean, structured silhouette. This pair delivers a balanced combination of functionality and minimal design.</p>
+                <p>Make refined strides with this [product_type], designed with a [key_design] and a clean, structured silhouette. This pair delivers a balanced combination of functionality and minimal design.</p>
                 <p>Crafted with a [material] upper and supported by a [heel_type], this product ensures durability while maintaining a refined and versatile aesthetic.</p>
                 <h3>Details</h3>
                 <ul>
@@ -314,13 +312,10 @@ function App() {
                   <li><strong>Detail:</strong> [key_design]</li>
                   <li><strong>Closure:</strong> [slip-on OR buckle-fastening]</li>
                 </ul>
+                <p><em>Now available exclusively at Mirage Retail Collective — a rare addition reserved only for those who seek distinction and refined luxury ✨</em></p>
 
                 ---
                 ## HARD RULES
-                * DO NOT remove "The Mirage"
-                * DO NOT replace brand name
-                * DO NOT write description without brand
-                * DO NOT change first sentence structure
                 * DO NOT add storytelling or marketing lines
                 * Title Format: <Design> <Type> – <Color>
                 * Tags: Select 2-4 from this exact list: ${customTags.join(", ")}.
@@ -329,8 +324,8 @@ function App() {
                 ---
                 ## VALIDATION STEP (MANDATORY)
                 Before output:
-                * Check if "The Mirage" is present in first sentence
-                * If missing → regenerate description
+                * Check if the exact line "Now available exclusively at Mirage Retail Collective..." is present at the very end of the description.
+                * Ensure "The Mirage" is NOT in the first sentence.
               `,
               config: {
                 responseMimeType: "application/json",
