@@ -254,7 +254,7 @@ function App() {
         ? [process.env.GEMINI_API_KEY, ...fallbackKeys]
         : fallbackKeys;
         
-      const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+      const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
       
       let response;
       let lastError;
@@ -263,10 +263,12 @@ function App() {
       for (const key of keysToTry) {
         const ai = new GoogleGenAI({ apiKey: key });
         for (const modelName of modelsToTry) {
-          try {
-            console.log(`Trying ${modelName} with key starting with ${key.substring(0, 10)}...`);
-            response = await ai.models.generateContent({
-              model: modelName,
+          // Try up to 2 times for each model if it's a 503
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+              console.log(`Trying ${modelName} with key starting with ${key.substring(0, 10)}... (Attempt ${attempt})`);
+              response = await ai.models.generateContent({
+                model: modelName,
               contents: `
                 You are a Shopify product content generator for the brand "The Mirage".
                 Your task is to generate product content STRICTLY in Mirage style.
@@ -346,14 +348,21 @@ function App() {
                   required: ["title", "description", "tags", "option1Name", "option1Value", "variantPrice", "compareAtPrice"]
                 }
               }
-            });
-            if (response && response.text) {
-              console.log(`Success with ${modelName}`);
-              break outerLoop;
+              });
+              if (response && response.text) {
+                console.log(`Success with ${modelName}`);
+                break outerLoop;
+              }
+            } catch (e: any) {
+              console.warn(`Model ${modelName} failed on attempt ${attempt}:`, e?.message || e);
+              lastError = e;
+              
+              if (e?.message?.includes('503') && attempt === 1) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              } else {
+                break;
+              }
             }
-          } catch (e: any) {
-            console.warn(`Model ${modelName} failed:`, e?.message || e);
-            lastError = e;
           }
         }
       }
