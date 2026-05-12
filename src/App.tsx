@@ -254,7 +254,7 @@ function App() {
         ? [process.env.GEMINI_API_KEY, ...fallbackKeys]
         : fallbackKeys;
         
-      const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+      const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
       
       let response;
       let lastError;
@@ -268,9 +268,13 @@ function App() {
           for (let attempt = 1; attempt <= 2; attempt++) {
             try {
               console.log(`Trying ${modelName} with key starting with ${key.substring(0, 10)}... (Attempt ${attempt})`);
-              response = await ai.models.generateContent({
-                model: modelName,
-              contents: `
+              
+              const model = ai.models.get(modelName);
+              const result = await model.generateContent({
+                contents: [{
+                  role: "user",
+                  parts: [{
+                    text: `
                 You are a Shopify product content generator for the brand "The Mirage".
                 Your task is to generate product content STRICTLY in Mirage style.
 
@@ -327,25 +331,29 @@ function App() {
                 Before output:
                 * Check if the exact line "Now available exclusively at Mirage Retail Collective..." is present at the very end of the description.
                 * Ensure "The Mirage" is NOT in the first sentence.
-              `,
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: Type.OBJECT,
-                  properties: {
-                    title: { type: Type.STRING },
-                    description: { type: Type.STRING },
-                    tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    option1Name: { type: Type.STRING },
-                    option1Value: { type: Type.STRING },
-                    variantPrice: { type: Type.STRING, description: "Calculated selling_price" },
-                    compareAtPrice: { type: Type.STRING, description: "Calculated compare_at_price" },
-                  },
-                  required: ["title", "description", "tags", "option1Name", "option1Value", "variantPrice", "compareAtPrice"]
+              `
+                  }]
+                }],
+                config: {
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                      title: { type: Type.STRING },
+                      description: { type: Type.STRING },
+                      tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+                      option1Name: { type: Type.STRING },
+                      option1Value: { type: Type.STRING },
+                      variantPrice: { type: Type.STRING, description: "Calculated selling_price" },
+                      compareAtPrice: { type: Type.STRING, description: "Calculated compare_at_price" },
+                    },
+                    required: ["title", "description", "tags", "option1Name", "option1Value", "variantPrice", "compareAtPrice"]
+                  }
                 }
-              }
               });
-              if (response && response.text) {
+              
+              if (result && result.text) {
+                response = result;
                 console.log(`Success with ${modelName}`);
                 break outerLoop;
               }
@@ -369,7 +377,8 @@ function App() {
 
       let result;
       try {
-        let text = response.text.trim();
+        let text = typeof response.text === 'function' ? response.text() : response.text;
+        text = text.trim();
         if (text.startsWith("\`\`\`json")) {
            text = text.replace(/^\`\`\`json\n?/, "").replace(/\n?\`\`\`$/, "");
         } else if (text.startsWith("\`\`\`")) {
