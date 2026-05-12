@@ -3,6 +3,7 @@ import puppeteer from "puppeteer";
 import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import * as cheerio from "cheerio";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const app = express();
 app.use(express.json());
