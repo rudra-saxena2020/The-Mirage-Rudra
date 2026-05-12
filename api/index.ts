@@ -50,6 +50,13 @@ app.post("/api/scrape", async (req, res) => {
     // Navigate to the URL with a shorter timeout
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
 
+    // Ounass specific wait
+    if (url.includes('ounass')) {
+      await page.waitForSelector('.ImageGallery', { timeout: 10000 }).catch(() => {});
+      await page.evaluate(() => window.scrollBy(0, 500));
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
     // Scroll to the bottom to trigger lazy loading (faster)
     await page.evaluate(async () => {
       await new Promise((resolve) => {
@@ -113,6 +120,20 @@ app.post("/api/scrape", async (req, res) => {
     // Extract images
     const product_images: string[] = [];
     const baseUrl = new URL(url).origin;
+
+    // 0. Ounass specific extraction (High Res)
+    if (url.includes('ounass')) {
+      $('picture source[srcSet*="zoom"], picture source[srcSet*="catalog/product"], link[itemProp="url"]').each((_, el) => {
+        let imgUrl = $(el).attr('srcSet') || $(el).attr('href');
+        if (imgUrl) {
+          imgUrl = imgUrl.split(',')[0].split(' ')[0].trim();
+          if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
+          if (imgUrl.includes('atgcdn.ae') && !product_images.includes(imgUrl)) {
+            product_images.push(imgUrl);
+          }
+        }
+      });
+    }
 
     // 1. Extract from all possible image-related attributes
     $("*").each((_, el) => {
