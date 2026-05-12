@@ -269,8 +269,8 @@ function App() {
             try {
               console.log(`Trying ${modelName} with key starting with ${key.substring(0, 10)}... (Attempt ${attempt})`);
               
-              const model = ai.models.get(modelName);
-              const result = await model.generateContent({
+              const result = await ai.models.generateContent({
+                model: modelName,
                 contents: [{
                   role: "user",
                   parts: [{
