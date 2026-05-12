@@ -154,7 +154,7 @@ function App() {
   const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
   const [mirageProduct, setMirageProduct] = useState<MirageProduct | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [history, setHistory] = useState<MirageProduct[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -254,7 +254,7 @@ function App() {
         ? [process.env.GEMINI_API_KEY, ...fallbackKeys]
         : fallbackKeys;
         
-      const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+      const modelsToTry = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro"];
       
       let response;
       let lastError;
@@ -419,10 +419,10 @@ function App() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, id: string = "general") => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const stripHtml = (html: string) => {
@@ -901,13 +901,23 @@ function App() {
                               {mirageProduct.title}
                             </h2>
                           </div>
-                          <button 
-                            onClick={() => copyToClipboard(mirageProduct.rawCsv || "")}
-                            className="p-4 sm:p-5 bg-mirage-dark text-white rounded-2xl sm:rounded-3xl hover:bg-mirage-gold hover:scale-105 active:scale-95 transition-all shadow-2xl group self-end sm:self-auto"
-                            title="Copy Full CSV"
-                          >
-                            {copied ? <Check className="w-5 h-5 sm:w-6 sm:h-6" /> : <Copy className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-6 transition-transform" />}
-                          </button>
+                          <div className="flex gap-3 self-end sm:self-auto">
+                            <button 
+                              onClick={() => copyToClipboard(mirageProduct.title, "title")}
+                              className="p-4 sm:p-5 bg-white border border-mirage-dark/10 text-mirage-dark rounded-2xl sm:rounded-3xl hover:bg-mirage-gold hover:text-white hover:scale-105 active:scale-95 transition-all shadow-xl group flex items-center gap-3"
+                              title="Copy Title"
+                            >
+                              {copiedId === "title" ? <Check className="w-5 h-5" /> : <FileText className="w-5 h-5 group-hover:rotate-6 transition-transform" />}
+                              <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest">Copy Title</span>
+                            </button>
+                            <button 
+                              onClick={() => copyToClipboard(mirageProduct.rawCsv || "", "csv")}
+                              className="p-4 sm:p-5 bg-mirage-dark text-white rounded-2xl sm:rounded-3xl hover:bg-mirage-gold hover:scale-105 active:scale-95 transition-all shadow-2xl group"
+                              title="Copy Full CSV"
+                            >
+                              {copiedId === "csv" ? <Check className="w-5 h-5 sm:w-6 sm:h-6" /> : <Copy className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-6 transition-transform" />}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Tabs */}
@@ -967,11 +977,11 @@ function App() {
                                     <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-mirage-dark/30">Editorial Preview</h4>
                                   </div>
                                   <button 
-                                    onClick={() => copyToClipboard(stripHtml(mirageProduct.description))}
+                                    onClick={() => copyToClipboard(stripHtml(mirageProduct.description), "desc")}
                                     className="flex items-center gap-2 px-4 py-2 bg-mirage-dark/5 border border-mirage-dark/5 rounded-full text-[9px] font-bold uppercase tracking-widest text-mirage-dark/40 hover:bg-mirage-dark hover:text-white transition-all group"
                                   >
-                                    {copied ? <Check className="w-3 h-3 text-mirage-gold" /> : <Copy className="w-3 h-3" />}
-                                    {copied ? "Copied" : "Copy Description"}
+                                    {copiedId === "desc" ? <Check className="w-3 h-3 text-mirage-gold" /> : <Copy className="w-3 h-3" />}
+                                    {copiedId === "desc" ? "Copied" : "Copy Description"}
                                   </button>
                                 </div>
                                 <div className="p-12 bg-white rounded-[3rem] border border-mirage-dark/5 shadow-inner relative overflow-hidden">
@@ -1006,9 +1016,14 @@ function App() {
                                     <div key={i} className="aspect-[3/4] rounded-2xl overflow-hidden bg-mirage-dark/5 border border-mirage-dark/5 relative group">
                                       <img 
                                         src={img} 
-                                        alt={`Product ${i + 1}`} 
-                                        className="w-full h-full object-cover"
+                                        alt={`${mirageProduct.title} - View ${i + 1}`} 
+                                        className="w-full h-full object-cover transition-opacity duration-300"
                                         referrerPolicy="no-referrer"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.src = "https://placehold.co/600x800/0A0A0A/C5A059?text=Image+Unavailable";
+                                          target.className = "w-full h-full object-contain opacity-40 p-4";
+                                        }}
                                       />
                                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                                         <div className="flex items-center justify-between">
@@ -1060,10 +1075,10 @@ function App() {
                               <div className="flex items-center justify-between">
                                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-mirage-dark/30">Shopify CSV Structure</h4>
                                 <button 
-                                  onClick={() => copyToClipboard(mirageProduct.rawCsv || "")}
+                                  onClick={() => copyToClipboard(mirageProduct.rawCsv || "", "csv-tab")}
                                   className="text-[10px] font-bold uppercase tracking-widest text-mirage-gold hover:underline"
                                 >
-                                  Copy All
+                                  {copiedId === "csv-tab" ? "Copied!" : "Copy All"}
                                 </button>
                               </div>
                               <div className="bg-mirage-dark text-white p-8 rounded-[2rem] font-mono text-xs overflow-x-auto leading-loose shadow-2xl">
@@ -1087,10 +1102,10 @@ function App() {
                                     <div className="flex items-center justify-between">
                                       <span className="text-white/30 uppercase tracking-widest">Description:</span>
                                       <button 
-                                        onClick={() => copyToClipboard(stripHtml(mirageProduct.description))}
+                                        onClick={() => copyToClipboard(stripHtml(mirageProduct.description), "desc-inner")}
                                         className="text-[8px] font-bold uppercase tracking-widest text-mirage-gold/60 hover:text-mirage-gold transition-colors"
                                       >
-                                        {copied ? "Copied" : "Copy Text"}
+                                        {copiedId === "desc-inner" ? "Copied" : "Copy Text"}
                                       </button>
                                     </div>
                                     <div className="text-[10px] opacity-60 break-all bg-white/5 p-4 rounded-xl">
@@ -1113,10 +1128,10 @@ function App() {
                               <div className="flex items-center justify-between">
                                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-mirage-dark/30">Raw CSV String</h4>
                                 <button 
-                                  onClick={() => copyToClipboard(mirageProduct.rawCsv || "")}
+                                  onClick={() => copyToClipboard(mirageProduct.rawCsv || "", "raw-csv")}
                                   className="text-[10px] font-bold uppercase tracking-widest text-mirage-gold hover:underline"
                                 >
-                                  Copy String
+                                  {copiedId === "raw-csv" ? "Copied!" : "Copy String"}
                                 </button>
                               </div>
                               <div className="bg-mirage-dark text-white p-8 rounded-[2rem] font-mono text-[10px] overflow-x-auto break-all leading-relaxed opacity-80">
@@ -1153,10 +1168,10 @@ function App() {
                             <Download className="w-4 h-4" /> Export CSV
                           </button>
                           <button 
-                            onClick={() => copyToClipboard(mirageProduct.rawCsv || "")}
+                            onClick={() => copyToClipboard(mirageProduct.rawCsv || "", "finalize")}
                             className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] group"
                           >
-                            Finalize <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform text-mirage-gold" />
+                            {copiedId === "finalize" ? "Copied" : "Finalize"} <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform text-mirage-gold" />
                           </button>
                         </div>
                       </div>
