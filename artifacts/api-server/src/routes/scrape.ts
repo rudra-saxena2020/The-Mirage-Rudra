@@ -11,7 +11,8 @@ const router: IRouter = Router();
 router.post("/scrape", async (req, res) => {
   const { url } = req.body;
   if (!url) {
-    return res.status(400).json({ error: "URL is required" });
+    res.status(400).json({ error: "URL is required" });
+    return;
   }
 
   let browser: any;
@@ -48,6 +49,7 @@ router.post("/scrape", async (req, res) => {
       await page
         .waitForSelector(".ImageGallery", { timeout: 10000 })
         .catch(() => {});
+      // @ts-ignore — runs in browser context via Puppeteer
       await page.evaluate(() => window.scrollBy(0, 500));
       await new Promise((r) => setTimeout(r, 1000));
     }
@@ -57,7 +59,9 @@ router.post("/scrape", async (req, res) => {
         let totalHeight = 0;
         const distance = 300;
         const timer = setInterval(() => {
+          // @ts-ignore — runs in browser context via Puppeteer
           const scrollHeight = document.body.scrollHeight;
+          // @ts-ignore
           window.scrollBy(0, distance);
           totalHeight += distance;
           if (totalHeight >= scrollHeight || totalHeight > 5000) {
@@ -258,7 +262,8 @@ router.post("/scrape", async (req, res) => {
 router.get("/proxy-image", async (req, res) => {
   const { url, filename } = req.query;
   if (!url || typeof url !== "string") {
-    return res.status(400).send("URL is required");
+    res.status(400).send("URL is required");
+    return;
   }
 
   try {
@@ -275,7 +280,8 @@ router.get("/proxy-image", async (req, res) => {
     const contentType = response.headers.get("content-type") || "image/jpeg";
 
     if (!contentType.startsWith("image/")) {
-      return res.status(400).send("Target URL is not an image");
+      res.status(400).send("Target URL is not an image");
+      return;
     }
 
     const arrayBuffer = await response.arrayBuffer();
