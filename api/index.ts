@@ -1,10 +1,5 @@
 import express from "express";
 import cors from "cors";
-import puppeteer from "puppeteer";
-// @ts-ignore
-import puppeteerCore from "puppeteer-core";
-// @ts-ignore
-import chromium from "@sparticuz/chromium";
 import * as cheerio from "cheerio";
 
 const app = express();
@@ -23,67 +18,28 @@ app.post("/api/scrape", async (req: any, res: any) => {
     return;
   }
 
-  let browser: any;
   try {
-    const isVercel = process.env.VERCEL === "1";
-
-    if (isVercel) {
-      browser = await puppeteerCore.launch({
-        args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: true,
-      });
-    } else {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-accelerated-2d-canvas",
-          "--disable-gpu",
-        ],
-      });
-    }
-
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    );
-    await page.setViewport({ width: 1440, height: 900 });
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
-
-    if (url.includes("ounass")) {
-      await page.waitForSelector(".ImageGallery", { timeout: 10000 }).catch(() => {});
-      // @ts-ignore — runs in browser context via Puppeteer
-      await page.evaluate(() => window.scrollBy(0, 500));
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-
-    await page.evaluate(async () => {
-      await new Promise((resolve) => {
-        let totalHeight = 0;
-        const distance = 300;
-        const timer = setInterval(() => {
-          // @ts-ignore
-          const scrollHeight = document.body.scrollHeight;
-          // @ts-ignore
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-          if (totalHeight >= scrollHeight || totalHeight > 5000) {
-            clearInterval(timer);
-            resolve(null);
-          }
-        }, 50);
-      });
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Upgrade-Insecure-Requests": "1",
+      },
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    const html = await page.content();
+    const html = await response.text();
     const $ = cheerio.load(html);
 
-    $("script, style, noscript, iframe, ad, .ads, #ads").remove();
+    $("script, style, noscript, iframe, .ads, #ads").remove();
 
     const raw_title = (
       $("h1").first().text().trim() ||
@@ -116,7 +72,13 @@ app.post("/api/scrape", async (req: any, res: any) => {
       "ul li, .product-specs li, .specifications li, .details-list li, [class*='details'] li, table tr"
     ).each((_: any, el: any) => {
       const text = $(el).text().trim().replace(/\s+/g, " ");
-      if (text && text.length > 2 && text.length < 500 && !text.includes("{") && !text.includes("}")) {
+      if (
+        text &&
+        text.length > 2 &&
+        text.length < 500 &&
+        !text.includes("{") &&
+        !text.includes("}")
+      ) {
         raw_specs.push(text);
       }
     });
@@ -124,26 +86,24 @@ app.post("/api/scrape", async (req: any, res: any) => {
     const product_images: string[] = [];
     const baseUrl = new URL(url).origin;
 
-    if (url.includes("ounass")) {
-      $(
-        'picture source[srcSet*="zoom"], picture source[srcSet*="catalog/product"], link[itemProp="url"]'
-      ).each((_: any, el: any) => {
-        let imgUrl = $(el).attr("srcSet") || $(el).attr("href");
-        if (imgUrl) {
-          imgUrl = imgUrl.split(",")[0].split(" ")[0].trim();
-          if (imgUrl.startsWith("//")) imgUrl = "https:" + imgUrl;
-          if (imgUrl.includes("atgcdn.ae") && !product_images.includes(imgUrl)) {
-            product_images.push(imgUrl);
-          }
-        }
-      });
-    }
-
     $("*").each((_: any, el: any) => {
       const attributes = [
-        "src", "srcset", "data-src", "data-srcset", "data-origin", "data-original",
-        "data-full-size", "data-zoom", "data-image", "data-large-image", "data-high-res",
-        "data-zoom-image", "data-lazy", "href", "content", "data-origin-src",
+        "src",
+        "srcset",
+        "data-src",
+        "data-srcset",
+        "data-origin",
+        "data-original",
+        "data-full-size",
+        "data-zoom",
+        "data-image",
+        "data-large-image",
+        "data-high-res",
+        "data-zoom-image",
+        "data-lazy",
+        "href",
+        "content",
+        "data-origin-src",
       ];
       attributes.forEach((attr: string) => {
         const val = $(el).attr(attr);
@@ -153,13 +113,18 @@ app.post("/api/scrape", async (req: any, res: any) => {
             const firstUrl = part.split(" ")[0];
             if (
               firstUrl &&
-              (firstUrl.match(/\.(jpg|jpeg|png|webp|avif)/i) || firstUrl.includes("image"))
+              (firstUrl.match(/\.(jpg|jpeg|png|webp|avif)/i) ||
+                firstUrl.includes("image"))
             ) {
               let absoluteSrc = firstUrl;
-              if (firstUrl.startsWith("//")) absoluteSrc = `https:${firstUrl}`;
-              else if (firstUrl.startsWith("/")) absoluteSrc = `${baseUrl}${firstUrl}`;
+              if (firstUrl.startsWith("//"))
+                absoluteSrc = `https:${firstUrl}`;
+              else if (firstUrl.startsWith("/"))
+                absoluteSrc = `${baseUrl}${firstUrl}`;
               else if (!firstUrl.startsWith("http")) {
-                try { absoluteSrc = new URL(firstUrl, url).href; } catch (e) {}
+                try {
+                  absoluteSrc = new URL(firstUrl, url).href;
+                } catch (e) {}
               }
               if (absoluteSrc.startsWith("http")) {
                 const lowerSrc = absoluteSrc.toLowerCase();
@@ -173,7 +138,10 @@ app.post("/api/scrape", async (req: any, res: any) => {
                   !lowerSrc.includes("avatar") &&
                   !lowerSrc.includes("badge") &&
                   !lowerSrc.includes("button");
-                if (isLikelyProductImage && !product_images.includes(absoluteSrc)) {
+                if (
+                  isLikelyProductImage &&
+                  !product_images.includes(absoluteSrc)
+                ) {
                   product_images.push(absoluteSrc);
                 }
               }
@@ -185,15 +153,21 @@ app.post("/api/scrape", async (req: any, res: any) => {
 
     $("[style*='background']").each((_: any, el: any) => {
       const style = $(el).attr("style");
-      const matches = style?.match(/url\(["']?(https?:\/\/[^"']+)["']?\)/gi);
+      const matches = style?.match(
+        /url\(["']?(https?:\/\/[^"']+)["']?\)/gi
+      );
       if (matches) {
         matches.forEach((m: string) => {
-          const src = m.match(/url\(["']?(https?:\/\/[^"']+)["']?\)/i)?.[1];
-          if (src && !product_images.includes(src)) product_images.push(src);
+          const src = m.match(
+            /url\(["']?(https?:\/\/[^"']+)["']?\)/i
+          )?.[1];
+          if (src && !product_images.includes(src))
+            product_images.push(src);
         });
       }
     });
 
+    const scriptImageMatches: string[] = [];
     $("script").each((_: any, el: any) => {
       const content = $(el).html();
       if (content && content.includes("http")) {
@@ -207,12 +181,13 @@ app.post("/api/scrape", async (req: any, res: any) => {
               !match.toLowerCase().includes("logo") &&
               !match.toLowerCase().includes("icon")
             ) {
-              product_images.push(match);
+              scriptImageMatches.push(match);
             }
           });
         }
       }
     });
+    product_images.push(...scriptImageMatches);
 
     const raw_price = (
       $(
@@ -236,17 +211,10 @@ app.post("/api/scrape", async (req: any, res: any) => {
   } catch (error: any) {
     console.error("Scraping error:", error);
     res.status(500).json({
-      error: error.message || "Failed to render and scrape the URL.",
-      details: "The site might be blocking browser-based requests or the URL is invalid.",
+      error: error.message || "Failed to scrape the URL.",
+      details:
+        "The site may be blocking server-side requests or require JavaScript rendering.",
     });
-  } finally {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        console.error("Error closing browser:", e);
-      }
-    }
   }
 });
 
@@ -265,10 +233,10 @@ app.get("/api/proxy-image", async (req: any, res: any) => {
       },
     });
 
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+    if (!response.ok)
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
 
     const contentType = response.headers.get("content-type") || "image/jpeg";
-
     if (!contentType.startsWith("image/")) {
       res.status(400).send("Target URL is not an image");
       return;
@@ -284,11 +252,16 @@ app.get("/api/proxy-image", async (req: any, res: any) => {
     else if (contentType.includes("avif")) extension = "avif";
     else if (contentType.includes("svg")) extension = "svg";
 
-    const baseFilename = filename ? filename.toString().split(".")[0] : "product-image";
+    const baseFilename = filename
+      ? filename.toString().split(".")[0]
+      : "product-image";
     const finalFilename = `${baseFilename}.${extension}`;
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `attachment; filename="${finalFilename}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${finalFilename}"`
+    );
     res.send(buffer);
   } catch (error: any) {
     console.error("Proxy error:", error);

@@ -1,0 +1,15 @@
+{
+  "name": "@workspace/vercel-api",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "cors": "^2",
+    "express": "^5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:"
+  }
+}
