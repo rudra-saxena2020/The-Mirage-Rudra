@@ -259,12 +259,7 @@ app.post("/api/transform", async (req: any, res: any) => {
   }
 
   const keysToTry = [
-    process.env.GOOGLE_API_KEY,
-    process.env.VITE_GEMINI_API_KEY,
-    process.env.VITE_GEMINI_API_KEY_main,
     process.env.VITE_GEMINI_API_KEY_main2,
-    process.env.VITE_GEMINI_API_KEYS_1,
-    process.env.VITE_GEMINI_API_KEYS_2,
   ].filter((k): k is string => !!k && k.trim().length > 0);
 
   if (keysToTry.length === 0) {
