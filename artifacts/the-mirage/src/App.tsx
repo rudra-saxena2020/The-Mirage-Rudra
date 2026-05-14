@@ -245,16 +245,21 @@ function App() {
     setStep("transforming");
     
     try {
-      const fallbackKeys = [
-        "AIzaSyDDSG2r9LlQvJ13Z1sN-OhMAlzjdn4QhZs",
-        "AIzaSyAK8Fu7M96tgzoMxVo4x-w8UchYnl8phBQ"
-      ];
-      
-      const envKey = import.meta.env.VITE_GEMINI_API_KEY;
-      const keysToTry = envKey && envKey.length > 0 
-        ? [envKey, ...fallbackKeys]
-        : fallbackKeys;
-        
+      const keysToTry = [
+        import.meta.env.VITE_GEMINI_API_KEY,
+        import.meta.env.VITE_GEMINI_API_KEY_main,
+        import.meta.env.VITE_GEMINI_API_KEYS_1,
+        import.meta.env.VITE_GEMINI_API_KEYS_2,
+        import.meta.env.VITE_GEMINI_API_KEY_1,
+        import.meta.env.VITE_GEMINI_API_KEY_2,
+      ].filter((k): k is string => !!k && k.trim().length > 0);
+
+      if (keysToTry.length === 0) {
+        throw new Error(
+          "No Gemini API key found. In Vercel → Settings → Environment Variables, add VITE_GEMINI_API_KEY with your Google AI Studio key."
+        );
+      }
+
       const modelsToTry = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
       
       let response;
@@ -263,7 +268,7 @@ function App() {
       outerLoop:
       for (const key of keysToTry) {
         if (!key || key.trim() === "") continue;
-        const ai = new GoogleGenAI({ apiKey: key, apiVersion: "v1" });
+        const ai = new GoogleGenAI({ apiKey: key });
         for (const modelName of modelsToTry) {
           // Try up to 2 times for each model if it's a 503
           for (let attempt = 1; attempt <= 2; attempt++) {
