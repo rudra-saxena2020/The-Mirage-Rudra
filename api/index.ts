@@ -325,7 +325,6 @@ Respond with ONLY a JSON object with these fields:
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json" },
               }),
             }
           );
