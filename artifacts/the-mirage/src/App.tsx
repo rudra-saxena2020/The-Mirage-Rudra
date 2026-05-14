@@ -263,7 +263,7 @@ function App() {
       outerLoop:
       for (const key of keysToTry) {
         if (!key || key.trim() === "") continue;
-        const ai = new GoogleGenAI({ apiKey: key });
+        const ai = new GoogleGenAI({ apiKey: key, apiVersion: "v1" });
         for (const modelName of modelsToTry) {
           // Try up to 2 times for each model if it's a 503
           for (let attempt = 1; attempt <= 2; attempt++) {
