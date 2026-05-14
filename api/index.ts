@@ -310,16 +310,23 @@ Respond with ONLY a JSON object with these fields:
   "compareAtPrice": string
 }`;
 
-  const modelsToTry = ["gemini-2.5-flash-preview-05-20", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+  // Stable models available in the v1 endpoint for all key types
+  const modelsToTry = ["gemini-2.0-flash", "gemini-2.0-flash-lite"];
   let lastError: string = "Unknown error";
 
   for (const key of keysToTry) {
+    let keyQuotaExhausted = false;
+
     for (const model of modelsToTry) {
+      if (keyQuotaExhausted) break;
+
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          console.log(`[transform] trying ${model} attempt ${attempt}`);
+          console.log(`[transform] key=...${key.slice(-6)} model=${model} attempt=${attempt}`);
+
+          // Use stable v1 endpoint — works with all valid Gemini API keys
           const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -332,8 +339,17 @@ Respond with ONLY a JSON object with these fields:
           if (!geminiRes.ok) {
             const errBody: any = await geminiRes.json().catch(() => ({}));
             const msg: string = errBody?.error?.message || JSON.stringify(errBody);
-            if (geminiRes.status === 429 || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
-              throw new Error("QUOTA_EXCEEDED");
+            const isQuotaErr =
+              geminiRes.status === 429 ||
+              msg.toLowerCase().includes("quota") ||
+              msg.includes("RESOURCE_EXHAUSTED") ||
+              msg.includes("rateLimitExceeded");
+            if (isQuotaErr) {
+              // Quota exhausted for this key — skip all remaining models
+              console.warn(`[transform] key quota exhausted, moving to next key`);
+              keyQuotaExhausted = true;
+              lastError = "QUOTA_EXCEEDED";
+              break;
             }
             throw new Error(msg);
           }
@@ -342,18 +358,25 @@ Respond with ONLY a JSON object with these fields:
           let text: string = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
           if (!text) throw new Error("Empty response from model");
 
-          text = text.trim().replace(/^```json\n?/, "").replace(/^```\n?/, "").replace(/\n?```$/, "");
+          // Strip markdown code fences if present
+          text = text
+            .trim()
+            .replace(/^```json\s*/i, "")
+            .replace(/^```\s*/i, "")
+            .replace(/\s*```$/i, "");
           const parsed = JSON.parse(text);
-          console.log(`[transform] success with ${model}`);
+          console.log(`[transform] success — model=${model}`);
           res.json(parsed);
           return;
         } catch (e: any) {
+          if (keyQuotaExhausted) break;
           lastError = e?.message || String(e);
-          console.warn(`[transform] ${model} attempt ${attempt} failed:`, lastError);
-          if (lastError.includes("503") && attempt === 1) {
-            await new Promise((r) => setTimeout(r, 2000));
+          console.warn(`[transform] failed: model=${model} attempt=${attempt}`, lastError);
+          // Retry once on 503 / overload
+          if ((lastError.includes("503") || lastError.includes("overloaded")) && attempt === 1) {
+            await new Promise((r) => setTimeout(r, 3000));
           } else {
-            break;
+            break; // move to next model
           }
         }
       }
@@ -363,8 +386,8 @@ Respond with ONLY a JSON object with these fields:
   const isQuota = lastError === "QUOTA_EXCEEDED";
   res.status(isQuota ? 429 : 500).json({
     error: isQuota
-      ? "All Gemini API keys have exceeded their free-tier daily quota. Please wait until midnight (Pacific time) for the quota to reset, or add a new API key from ai.google.dev to your Vercel environment variables as VITE_GEMINI_API_KEY."
-      : `AI transformation failed. Last error: ${lastError}`,
+      ? "All API keys have exceeded their free-tier quota. The quota resets daily — try again later, or add a fresh key from ai.google.dev to Vercel as VITE_GEMINI_API_KEY."
+      : `AI transformation failed: ${lastError}`,
   });
 });
 
