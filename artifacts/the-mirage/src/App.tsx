@@ -255,7 +255,7 @@ function App() {
         ? [envKey, ...fallbackKeys]
         : fallbackKeys;
         
-      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro"];
+      const modelsToTry = ["gemini-2.0-flash-001", "gemini-2.0-flash-lite-001", "gemini-1.5-flash-001", "gemini-1.5-pro-001"];
       
       let response;
       let lastError;
