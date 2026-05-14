@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "outputDirectory": "artifacts/the-mirage/dist/public",
   "functions": {
     "api/index.ts": {
