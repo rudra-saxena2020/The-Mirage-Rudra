@@ -218,50 +218,6 @@ app.post("/api/scrape", async (req: any, res: any) => {
   }
 });
 
-app.get("/api/test-keys", async (_req: any, res: any) => {
-  const candidates: Record<string, string | undefined> = {
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-    GEMINI_API_KEY_main: process.env.GEMINI_API_KEY_main,
-    GEMINI_API_KEYS_1: process.env.GEMINI_API_KEYS_1,
-    GEMINI_API_KEYS_2: process.env.GEMINI_API_KEYS_2,
-    VITE_GEMINI_API_KEY: process.env.VITE_GEMINI_API_KEY,
-    VITE_GEMINI_API_KEY_main: process.env.VITE_GEMINI_API_KEY_main,
-    VITE_GEMINI_API_KEYS_1: process.env.VITE_GEMINI_API_KEYS_1,
-    VITE_GEMINI_API_KEYS_2: process.env.VITE_GEMINI_API_KEYS_2,
-  };
-
-  const results: Record<string, { present: boolean; working: boolean; error?: string }> = {};
-
-  for (const [name, key] of Object.entries(candidates)) {
-    if (!key || key.trim().length === 0) {
-      results[name] = { present: false, working: false };
-      continue;
-    }
-    try {
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: "Reply with: ok" }] }],
-          }),
-        }
-      );
-      if (r.ok) {
-        results[name] = { present: true, working: true };
-      } else {
-        const body: any = await r.json().catch(() => ({}));
-        results[name] = { present: true, working: false, error: body?.error?.message || `HTTP ${r.status}` };
-      }
-    } catch (e: any) {
-      results[name] = { present: true, working: false, error: e.message };
-    }
-  }
-
-  res.json(results);
-});
-
 app.post("/api/transform", async (req: any, res: any) => {
   const { data, tags } = req.body;
   if (!data) {
@@ -270,10 +226,6 @@ app.post("/api/transform", async (req: any, res: any) => {
   }
 
   const keysToTry = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_API_KEY_main,
-    process.env.GEMINI_API_KEYS_1,
-    process.env.GEMINI_API_KEYS_2,
     process.env.VITE_GEMINI_API_KEY,
     process.env.VITE_GEMINI_API_KEY_main,
     process.env.VITE_GEMINI_API_KEYS_1,
@@ -281,7 +233,7 @@ app.post("/api/transform", async (req: any, res: any) => {
   ].filter((k): k is string => !!k && k.trim().length > 0);
 
   if (keysToTry.length === 0) {
-    res.status(500).json({ error: "No Gemini API key configured on the server. Add GEMINI_API_KEY to your Vercel environment variables." });
+    res.status(500).json({ error: "No Gemini API key configured. Add VITE_GEMINI_API_KEY to your Vercel environment variables." });
     return;
   }
 
@@ -377,8 +329,12 @@ Respond with ONLY a JSON object with these fields:
           );
 
           if (!geminiRes.ok) {
-            const errBody = await geminiRes.json().catch(() => ({}));
-            throw new Error(JSON.stringify(errBody));
+            const errBody: any = await geminiRes.json().catch(() => ({}));
+            const msg: string = errBody?.error?.message || JSON.stringify(errBody);
+            if (geminiRes.status === 429 || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+              throw new Error("QUOTA_EXCEEDED");
+            }
+            throw new Error(msg);
           }
 
           const geminiData: any = await geminiRes.json();
@@ -403,7 +359,12 @@ Respond with ONLY a JSON object with these fields:
     }
   }
 
-  res.status(500).json({ error: `All models and keys failed. Last error: ${lastError}` });
+  const isQuota = lastError === "QUOTA_EXCEEDED";
+  res.status(isQuota ? 429 : 500).json({
+    error: isQuota
+      ? "All Gemini API keys have exceeded their free-tier daily quota. Please wait until midnight (Pacific time) for the quota to reset, or add a new API key from ai.google.dev to your Vercel environment variables as VITE_GEMINI_API_KEY."
+      : `AI transformation failed. Last error: ${lastError}`,
+  });
 });
 
 app.get("/api/proxy-image", async (req: any, res: any) => {
