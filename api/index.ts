@@ -218,6 +218,50 @@ app.post("/api/scrape", async (req: any, res: any) => {
   }
 });
 
+app.get("/api/test-keys", async (_req: any, res: any) => {
+  const candidates: Record<string, string | undefined> = {
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_API_KEY_main: process.env.GEMINI_API_KEY_main,
+    GEMINI_API_KEYS_1: process.env.GEMINI_API_KEYS_1,
+    GEMINI_API_KEYS_2: process.env.GEMINI_API_KEYS_2,
+    VITE_GEMINI_API_KEY: process.env.VITE_GEMINI_API_KEY,
+    VITE_GEMINI_API_KEY_main: process.env.VITE_GEMINI_API_KEY_main,
+    VITE_GEMINI_API_KEYS_1: process.env.VITE_GEMINI_API_KEYS_1,
+    VITE_GEMINI_API_KEYS_2: process.env.VITE_GEMINI_API_KEYS_2,
+  };
+
+  const results: Record<string, { present: boolean; working: boolean; error?: string }> = {};
+
+  for (const [name, key] of Object.entries(candidates)) {
+    if (!key || key.trim().length === 0) {
+      results[name] = { present: false, working: false };
+      continue;
+    }
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: "Reply with: ok" }] }],
+          }),
+        }
+      );
+      if (r.ok) {
+        results[name] = { present: true, working: true };
+      } else {
+        const body: any = await r.json().catch(() => ({}));
+        results[name] = { present: true, working: false, error: body?.error?.message || `HTTP ${r.status}` };
+      }
+    } catch (e: any) {
+      results[name] = { present: true, working: false, error: e.message };
+    }
+  }
+
+  res.json(results);
+});
+
 app.post("/api/transform", async (req: any, res: any) => {
   const { data, tags } = req.body;
   if (!data) {
