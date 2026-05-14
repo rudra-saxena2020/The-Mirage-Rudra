@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "outputDirectory": "artifacts/the-mirage/dist/public",
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
