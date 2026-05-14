@@ -218,6 +218,146 @@ app.post("/api/scrape", async (req: any, res: any) => {
   }
 });
 
+app.post("/api/transform", async (req: any, res: any) => {
+  const { data, tags } = req.body;
+  if (!data) {
+    res.status(400).json({ error: "data is required" });
+    return;
+  }
+
+  const keysToTry = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_main,
+    process.env.GEMINI_API_KEYS_1,
+    process.env.GEMINI_API_KEYS_2,
+  ].filter((k): k is string => !!k && k.trim().length > 0);
+
+  if (keysToTry.length === 0) {
+    res.status(500).json({ error: "No Gemini API key configured on the server. Add GEMINI_API_KEY to your Vercel environment variables." });
+    return;
+  }
+
+  const tagList: string = Array.isArray(tags) ? tags.join(", ") : "";
+
+  const prompt = `
+You are a Shopify product content generator for the brand "The Mirage".
+Your task is to generate product content STRICTLY in Mirage style.
+
+INPUT DATA:
+Title: ${data.raw_title}
+Description: ${data.raw_description}
+Specs: ${(data.raw_specs || []).join(", ")}
+Cost Price: ${data.raw_price}
+
+---
+## PRICING ENGINE RULES (STRICT)
+Your job is to convert cost_price into selling_price using these strict business rules:
+
+1. IF cost_price > 100000 → selling_price = cost_price × 1.22
+2. IF cost_price ≤ 100000 → selling_price = cost_price × 1.25
+3. Round selling_price to nearest whole number (no decimals).
+4. compare_at_price MUST be 30%–50% higher than selling_price (realistic rounded value).
+5. If cost_price is missing or invalid, use 2999 as default selling_price.
+6. All prices are in INR.
+
+---
+## CRITICAL BRAND RULE
+* DO NOT mention "The Mirage" or "Mirage" anywhere in the main description text or the first sentence.
+* The ONLY place Mirage should be mentioned is in the exact footer line provided below.
+
+---
+## DESCRIPTION TEMPLATE (STRICT)
+You MUST follow this exact structure for the description (HTML format):
+
+<p>Make refined strides with this [product_type], designed with a [key_design] and a clean, structured silhouette. This pair delivers a balanced combination of functionality and minimal design.</p>
+<p>Crafted with a [material] upper and supported by a [heel_type], this product ensures durability while maintaining a refined and versatile aesthetic.</p>
+<h3>Details</h3>
+<ul>
+  <li><strong>Upper:</strong> [material]</li>
+  <li><strong>Lining:</strong> [material or "leather"]</li>
+  <li><strong>Sole:</strong> durable outsole</li>
+  <li><strong>Toe shape:</strong> [toe_shape]</li>
+  <li><strong>Heel type:</strong> [heel_type]</li>
+  <li><strong>Color:</strong> [color]</li>
+  <li><strong>Detail:</strong> [key_design]</li>
+  <li><strong>Closure:</strong> [slip-on OR buckle-fastening]</li>
+</ul>
+<p><em>Now available exclusively at Mirage Retail Collective — a rare addition reserved only for those who seek distinction and refined luxury ✨</em></p>
+
+---
+## HARD RULES
+* DO NOT add storytelling or marketing lines
+* Title Format: <Design> <Type> – <Color>
+* Tags: Select 2-4 from this exact list: ${tagList}.
+* Variants: Use "Title" as Option1 Name and "Default Title" as Option1 Value.
+
+---
+## VALIDATION STEP (MANDATORY)
+Before output:
+* Check if the exact line "Now available exclusively at Mirage Retail Collective..." is present at the very end of the description.
+* Ensure "The Mirage" is NOT in the first sentence.
+
+Respond with ONLY a JSON object with these fields:
+{
+  "title": string,
+  "description": string (HTML),
+  "tags": string[],
+  "option1Name": string,
+  "option1Value": string,
+  "variantPrice": string,
+  "compareAtPrice": string
+}`;
+
+  const modelsToTry = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
+  let lastError: string = "Unknown error";
+
+  for (const key of keysToTry) {
+    for (const model of modelsToTry) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          console.log(`[transform] trying ${model} attempt ${attempt}`);
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" },
+              }),
+            }
+          );
+
+          if (!geminiRes.ok) {
+            const errBody = await geminiRes.json().catch(() => ({}));
+            throw new Error(JSON.stringify(errBody));
+          }
+
+          const geminiData: any = await geminiRes.json();
+          let text: string = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          if (!text) throw new Error("Empty response from model");
+
+          text = text.trim().replace(/^```json\n?/, "").replace(/^```\n?/, "").replace(/\n?```$/, "");
+          const parsed = JSON.parse(text);
+          console.log(`[transform] success with ${model}`);
+          res.json(parsed);
+          return;
+        } catch (e: any) {
+          lastError = e?.message || String(e);
+          console.warn(`[transform] ${model} attempt ${attempt} failed:`, lastError);
+          if (lastError.includes("503") && attempt === 1) {
+            await new Promise((r) => setTimeout(r, 2000));
+          } else {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  res.status(500).json({ error: `All models and keys failed. Last error: ${lastError}` });
+});
+
 app.get("/api/proxy-image", async (req: any, res: any) => {
   const { url, filename } = req.query;
   if (!url || typeof url !== "string") {

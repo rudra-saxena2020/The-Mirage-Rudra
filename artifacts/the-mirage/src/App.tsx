@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, Component } from "react";
-import { GoogleGenAI, Type } from "@google/genai";
 import { 
   Search, 
   Sparkles, 
@@ -245,156 +244,18 @@ function App() {
     setStep("transforming");
     
     try {
-      const keysToTry = [
-        import.meta.env.VITE_GEMINI_API_KEY,
-        import.meta.env.VITE_GEMINI_API_KEY_main,
-        import.meta.env.VITE_GEMINI_API_KEYS_1,
-        import.meta.env.VITE_GEMINI_API_KEYS_2,
-        import.meta.env.VITE_GEMINI_API_KEY_1,
-        import.meta.env.VITE_GEMINI_API_KEY_2,
-      ].filter((k): k is string => !!k && k.trim().length > 0);
+      const transformRes = await fetch("/api/transform", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, tags: customTags }),
+      });
 
-      if (keysToTry.length === 0) {
-        throw new Error(
-          "No Gemini API key found. In Vercel → Settings → Environment Variables, add VITE_GEMINI_API_KEY with your Google AI Studio key."
-        );
+      if (!transformRes.ok) {
+        const errBody = await transformRes.json().catch(() => ({}));
+        throw new Error(errBody.error || `Server error ${transformRes.status}`);
       }
 
-      const modelsToTry = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"];
-      
-      let response;
-      let lastError;
-      
-      outerLoop:
-      for (const key of keysToTry) {
-        if (!key || key.trim() === "") continue;
-        const ai = new GoogleGenAI({ apiKey: key });
-        for (const modelName of modelsToTry) {
-          // Try up to 2 times for each model if it's a 503
-          for (let attempt = 1; attempt <= 2; attempt++) {
-            try {
-              console.log(`Trying ${modelName} with key starting with ${key.substring(0, 10)}... (Attempt ${attempt})`);
-              
-              const result = await ai.models.generateContent({
-                model: modelName,
-                contents: [{
-                  role: "user",
-                  parts: [{
-                    text: `
-                You are a Shopify product content generator for the brand "The Mirage".
-                Your task is to generate product content STRICTLY in Mirage style.
-
-                INPUT DATA:
-                Title: ${data.raw_title}
-                Description: ${data.raw_description}
-                Specs: ${data.raw_specs.join(", ")}
-                Cost Price: ${data.raw_price}
-                
-                ---
-                ## 🚨 PRICING ENGINE RULES (STRICT)
-                Your job is to convert cost_price into selling_price using these strict business rules:
-                
-                1. IF cost_price > 100000 → selling_price = cost_price × 1.22
-                2. IF cost_price ≤ 100000 → selling_price = cost_price × 1.25
-                3. Round selling_price to nearest whole number (no decimals).
-                4. compare_at_price MUST be 30%–50% higher than selling_price (realistic rounded value).
-                5. If cost_price is missing or invalid, use 2999 as default selling_price.
-                6. All prices are in INR.
-                
-                ---
-                ## CRITICAL BRAND RULE
-                * DO NOT mention "The Mirage" or "Mirage" anywhere in the main description text or the first sentence.
-                * The ONLY place Mirage should be mentioned is in the exact footer line provided below.
-
-                ---
-                ## DESCRIPTION TEMPLATE (STRICT)
-                You MUST follow this exact structure for the description (HTML format):
-
-                <p>Make refined strides with this [product_type], designed with a [key_design] and a clean, structured silhouette. This pair delivers a balanced combination of functionality and minimal design.</p>
-                <p>Crafted with a [material] upper and supported by a [heel_type], this product ensures durability while maintaining a refined and versatile aesthetic.</p>
-                <h3>Details</h3>
-                <ul>
-                  <li><strong>Upper:</strong> [material]</li>
-                  <li><strong>Lining:</strong> [material or "leather"]</li>
-                  <li><strong>Sole:</strong> durable outsole</li>
-                  <li><strong>Toe shape:</strong> [toe_shape]</li>
-                  <li><strong>Heel type:</strong> [heel_type]</li>
-                  <li><strong>Color:</strong> [color]</li>
-                  <li><strong>Detail:</strong> [key_design]</li>
-                  <li><strong>Closure:</strong> [slip-on OR buckle-fastening]</li>
-                </ul>
-                <p><em>Now available exclusively at Mirage Retail Collective — a rare addition reserved only for those who seek distinction and refined luxury ✨</em></p>
-
-                ---
-                ## HARD RULES
-                * DO NOT add storytelling or marketing lines
-                * Title Format: <Design> <Type> – <Color>
-                * Tags: Select 2-4 from this exact list: ${customTags.join(", ")}.
-                * Variants: Use "Title" as Option1 Name and "Default Title" as Option1 Value.
-
-                ---
-                ## VALIDATION STEP (MANDATORY)
-                Before output:
-                * Check if the exact line "Now available exclusively at Mirage Retail Collective..." is present at the very end of the description.
-                * Ensure "The Mirage" is NOT in the first sentence.
-              `
-                  }]
-                }],
-                config: {
-                  responseMimeType: "application/json",
-                  responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                      title: { type: Type.STRING },
-                      description: { type: Type.STRING },
-                      tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                      option1Name: { type: Type.STRING },
-                      option1Value: { type: Type.STRING },
-                      variantPrice: { type: Type.STRING, description: "Calculated selling_price" },
-                      compareAtPrice: { type: Type.STRING, description: "Calculated compare_at_price" },
-                    },
-                    required: ["title", "description", "tags", "option1Name", "option1Value", "variantPrice", "compareAtPrice"]
-                  }
-                }
-              });
-              
-              if (result && result.text) {
-                response = result;
-                console.log(`Success with ${modelName}`);
-                break outerLoop;
-              }
-            } catch (e: any) {
-              console.warn(`Model ${modelName} failed on attempt ${attempt}:`, e?.message || e);
-              lastError = e;
-              
-              if (e?.message?.includes('503') && attempt === 1) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              } else {
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (!response || !response.text) {
-        throw new Error(`All models and keys failed. Last error: ${lastError?.message || "Unknown"}`);
-      }
-
-      let result;
-      try {
-        let text = response.text;
-        text = text.trim();
-        if (text.startsWith("\`\`\`json")) {
-           text = text.replace(/^\`\`\`json\n?/, "").replace(/\n?\`\`\`$/, "");
-        } else if (text.startsWith("\`\`\`")) {
-           text = text.replace(/^\`\`\`\n?/, "").replace(/\n?\`\`\`$/, "");
-        }
-        result = JSON.parse(text);
-      } catch (parseErr) {
-        console.error("Failed to parse AI response:", response.text);
-        throw new Error("AI returned an invalid JSON format.");
-      }
+      const result = await transformRes.json();
       
       // Generate CSV string - Shopify format supports multiple images via multiple rows
       // but for this standardizer we'll provide a clean format with Image Src
