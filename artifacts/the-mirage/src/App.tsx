@@ -378,7 +378,7 @@ function App() {
 
       let result;
       try {
-        let text = typeof response.text === 'function' ? response.text() : response.text;
+        let text = response.text;
         text = text.trim();
         if (text.startsWith("\`\`\`json")) {
            text = text.replace(/^\`\`\`json\n?/, "").replace(/\n?\`\`\`$/, "");
