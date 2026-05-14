@@ -19,24 +19,57 @@ app.post("/api/scrape", async (req: any, res: any) => {
   }
 
   try {
+    // Full Chrome 124 browser headers to bypass bot detection
+    const parsedUrl = new URL(url);
     const response = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
         "Accept-Language": "en-US,en;q=0.9",
         "Accept-Encoding": "gzip, deflate, br",
         "Cache-Control": "no-cache",
+        Pragma: "no-cache",
         "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Sec-Ch-Ua":
+          '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        Referer: `${parsedUrl.protocol}//${parsedUrl.hostname}/`,
+        "X-Forwarded-For": "66.249.66.1",
       },
+      redirect: "follow",
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    // On 403, retry with a mobile Safari UA — some sites block desktop crawlers
+    let finalResponse = response;
+    if (!response.ok && response.status === 403) {
+      const retry = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Upgrade-Insecure-Requests": "1",
+        },
+        redirect: "follow",
+      });
+      if (retry.ok) {
+        finalResponse = retry;
+      }
     }
 
-    const html = await response.text();
+    if (!finalResponse.ok) {
+      throw new Error(`HTTP ${finalResponse.status}: ${finalResponse.statusText}`);
+    }
+
+    const html = await finalResponse.text();
     const $ = cheerio.load(html);
 
     $("script, style, noscript, iframe, .ads, #ads").remove();
