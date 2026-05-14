@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "sEo4maFGOGLhzt3ZgDl3L"
+uri = "file://artifacts/the-mirage-mobile/assets/images/icon.png"
+type = "image"
+title = "mirage mobile app icon"
