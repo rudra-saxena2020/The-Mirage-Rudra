@@ -226,6 +226,7 @@ app.post("/api/transform", async (req: any, res: any) => {
   }
 
   const keysToTry = [
+    process.env.GOOGLE_API_KEY,
     process.env.VITE_GEMINI_API_KEY,
     process.env.VITE_GEMINI_API_KEY_main,
     process.env.VITE_GEMINI_API_KEYS_1,
